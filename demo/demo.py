@@ -12,6 +12,9 @@ from detectron2.data.detection_utils import read_image
 from detectron2.utils.logger import setup_logger
 from predictor import VisualizationDemo
 
+import sys
+sys.path.append("./")
+from utils.decode_recs import decode_recognition_vn
 
 # constants
 WINDOW_NAME = "COCO detections"
@@ -62,6 +65,22 @@ def get_parser():
     )
     return parser
 
+def save_result(file_p, beziers, recs, scores):
+    print("File path: ", file_p)
+    f = open(file_p, 'w')
+    for bezier, rec, score in zip(beziers, recs, scores):
+        # rec_text = decode_recognition(rec)
+        # print("Do")
+        rec_text = decode_recognition_vn(rec)
+        rec_text = rec_text.replace(",",".")
+        bbox_4p = '{},{},{},{},{},{},{},{}'.format(str(int(round(bezier[0]))), str(int(round(bezier[1]))),
+         str(int(round(bezier[6]))), str(int(round(bezier[7]))),
+        str(int(round(bezier[8]))), str(int(round(bezier[9]))),
+        str(int(round(bezier[14]))), str(int(round(bezier[15]))) )
+        # content = bbox_4p + str(score) + '###' + rec_text + '\n'
+        content = bbox_4p + '###' + rec_text + '\n'
+        f.write(content)
+    f.close()
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
@@ -83,21 +102,30 @@ if __name__ == "__main__":
             # use PIL, to be consistent with evaluation
             img = read_image(path, format="BGR")
             start_time = time.time()
+            # print("do")
+            # try:
             predictions, visualized_output = demo.run_on_image(img)
+            # except:
+            #     continue
             logger.info(
                 "{}: detected {} instances in {:.2f}s".format(
                     path, len(predictions["instances"]), time.time() - start_time
                 )
             )
+            beziers = predictions["instances"].to('cpu').beziers.tolist()
+            scores = predictions["instances"].to('cpu').scores.tolist()
+            recs = predictions["instances"].to('cpu').recs
 
             if args.output:
                 if os.path.isdir(args.output):
                     assert os.path.isdir(args.output), args.output
                     out_filename = os.path.join(args.output, os.path.basename(path))
+                    result_path = out_filename.split(".")[0] + '.txt'
                 else:
                     assert len(args.input) == 1, "Please specify a directory with args.output"
                     out_filename = args.output
                 visualized_output.save(out_filename)
+                save_result(result_path, beziers, recs, scores)
             else:
                 cv2.imshow(WINDOW_NAME, visualized_output.get_image()[:, :, ::-1])
                 if cv2.waitKey(0) == 27:
