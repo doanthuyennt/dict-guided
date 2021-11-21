@@ -52,6 +52,11 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--save_folder",
+        help="A directory to save txt results."
+    )
+
+    parser.add_argument(
         "--confidence-threshold",
         type=float,
         default=0.5,
@@ -119,11 +124,12 @@ if __name__ == "__main__":
                 if os.path.isdir(args.output):
                     assert os.path.isdir(args.output), args.output
                     out_filename = os.path.join(args.output, os.path.basename(path))
-                    result_path = out_filename + '.txt'
+                    result_filename = os.path.join(args.save_folder, os.path.basename(path))
+                    result_path = result_filename + '.txt'
                 else:
                     assert len(args.input) == 1, "Please specify a directory with args.output"
                     out_filename = args.output
-                # visualized_output.save(out_filename)
+                visualized_output.save(out_filename)
                 save_result(result_path, beziers, recs, scores)
             else:
                 cv2.imshow(WINDOW_NAME, visualized_output.get_image()[:, :, ::-1])
